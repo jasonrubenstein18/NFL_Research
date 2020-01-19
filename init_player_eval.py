@@ -1,5 +1,6 @@
 """
 Used season_play_by_play in R to pull data, thanks to https://github.com/ryurko
+Salaries from https://docs.google.com/spreadsheets/d/1rds8LOv8t8HqtnM-OLzSbrNpdEy_8vUYAP39swye57I/edit?usp=sharing
 Further data manipulation is rewritten in Python and partially expanded with more to come
 """
 
@@ -14,7 +15,7 @@ import matplotlib.pyplot as plt
 os.environ["MODIN_ENGINE"] = "dask"
 import modin.pandas as pd_modin
 
-
+# Update paths for your own machine
 nfl_data_pbp = pd.read_csv('~/Desktop/R/NFL/NFL_pbp_data.csv')
 nfl_data_salary = pd.read_csv("~/Desktop/Python/NFL/nfl salary - Sheet1.csv")
 
@@ -201,26 +202,4 @@ merged_team = pd.merge(team_pass_df, team_rush_df, on="posteam")
 fig = plotly_express.scatter(ind_rec_rush_df, x="Weighted_EPA_Opps", y="Weighted_WPA_Opps", color="Player",
                              size='Opportunities', hover_data=['Player'])
 fig.show()
-
-
-
-
-# def add_positions(df, years):
-#     def find_player_names(player_names):
-#         if len(df[player_names]) == 0:
-#             result = "None"
-#         else:
-#             freq = df[player_names].value_counts()
-#             result = freq.max()
-#         return result
-#
-#     passer_names = df.groupby('Passer_ID').apply(find_player_names)
-#     # receiver_names = df.groupby('Receiver_ID').agg({'Receiver_Name': find_player_names("Receiver")})
-#     # rusher_names = df.groupby('Rusher_ID').agg({'Rusher_Name': find_player_names("Rusher")})
-#
-#     df = df.merge(passer_names, on='Passer_ID', how='left')
-#     # df = df.merge(receiver_names, on='Receiver_ID', how='left')
-#     # df = df.merge(rusher_names, on='Rusher_ID', how='left')
-#     return df
-
 
