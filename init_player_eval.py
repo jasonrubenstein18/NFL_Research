@@ -23,6 +23,7 @@ print(list(nfl_data_pbp))
 
 # Fix nan, LA to LAR, STL to LAR,
 nfl_data_pbp = nfl_data_pbp[pd.notnull(nfl_data_pbp['posteam'])]
+
 def fix_teams(df):
     df['posteam'] = np.where((df['posteam'] == "JAC"),
                              "JAX",
@@ -47,16 +48,42 @@ nfl_data_pbp = fix_teams(nfl_data_pbp)
 
 print(nfl_data_pbp['Passer'].unique())
 
+# fix instances where single ID has multiple names (problem exists for Rushers and Receivers)
+rusher_ids = nfl_data_pbp['Rusher_ID'].unique()
+for i in rusher_ids:
+    try:
+        a = nfl_data_pbp[(nfl_data_pbp['Rusher_ID']) == i]
+        ac = a.groupby('Rusher')['Rusher'].agg({'count'}).reset_index()
+        max_player = ac['Rusher'][ac['count'].argmax()]
+        nfl_data_pbp['Rusher'] = np.where(nfl_data_pbp['Rusher_ID'] == i,
+                                          max_player,
+                                          nfl_data_pbp['Rusher'])
+    except ValueError:
+        pass
 
-# active_grp = nfl_data_pbp.groupby('Passer_ID').agg({
-#     'Passer': 'nunique'
-# }).reset_index()
-#
-# active_grp_not1 = active_grp[active_grp['Passer'] != 1]
-# agrp = nfl_data_pbp[nfl_data_pbp['Passer_ID'].isin(active_grp_not1['Passer_ID'])]
+receiver_ids = nfl_data_pbp['Receiver_ID'].unique()
+for i in receiver_ids:
+    try:
+        a = nfl_data_pbp[(nfl_data_pbp['Receiver_ID']) == i]
+        ac = a.groupby('Receiver')['Receiver'].agg({'count'}).reset_index()
+        max_player = ac['Receiver'][ac['count'].argmax()]
+        nfl_data_pbp['Receiver'] = np.where(nfl_data_pbp['Receiver_ID'] == i,
+                                            max_player,
+                                            nfl_data_pbp['Receiver'])
+    except ValueError:
+        pass
 
-russ = nfl_data_pbp[(nfl_data_pbp['Passer_ID'] == "None")]
-russ = nfl_data_pbp.loc[nfl_data_pbp['desc'].str.contains('Incomplete', case=False)]
+passer_ids = nfl_data_pbp['Passer_ID'].unique()
+for i in passer_ids:
+    try:
+        a = nfl_data_pbp[(nfl_data_pbp['Passer_ID']) == i]
+        ac = a.groupby('Passer')['Passer'].agg({'count'}).reset_index()
+        max_player = ac['Passer'][ac['count'].argmax()]
+        nfl_data_pbp['Passer'] = np.where(nfl_data_pbp['Passer_ID'] == i,
+                                          max_player,
+                                          nfl_data_pbp['Passer'])
+    except ValueError:
+        pass
 
 def player_fixes(df):
     df['Rusher_ID'] = np.where(df['PlayType'] == "Sack",
