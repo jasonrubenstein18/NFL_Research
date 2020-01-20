@@ -24,7 +24,9 @@ print(list(nfl_data_pbp))
 # Fix nan, LA to LAR, STL to LAR,
 nfl_data_pbp = nfl_data_pbp[pd.notnull(nfl_data_pbp['posteam'])]
 
+# Fix nan, LA to LAR, STL to LAR,
 def fix_teams(df):
+    df = df[pd.notnull(df['posteam'])]
     df['posteam'] = np.where((df['posteam'] == "JAC"),
                              "JAX",
                              df['posteam'])
@@ -44,56 +46,65 @@ def fix_teams(df):
                                    "LAC",
                                    df['DefensiveTeam'])
     return df
-nfl_data_pbp = fix_teams(nfl_data_pbp)
 
-print(nfl_data_pbp['Passer'].unique())
-
-# fix instances where single ID has multiple names (problem exists for Rushers and Receivers)
-rusher_ids = nfl_data_pbp['Rusher_ID'].unique()
-for i in rusher_ids:
-    try:
-        a = nfl_data_pbp[(nfl_data_pbp['Rusher_ID']) == i]
-        ac = a.groupby('Rusher')['Rusher'].agg({'count'}).reset_index()
-        max_player = ac['Rusher'][ac['count'].argmax()]
-        nfl_data_pbp['Rusher'] = np.where(nfl_data_pbp['Rusher_ID'] == i,
-                                          max_player,
-                                          nfl_data_pbp['Rusher'])
-    except ValueError:
-        pass
-
-receiver_ids = nfl_data_pbp['Receiver_ID'].unique()
-for i in receiver_ids:
-    try:
-        a = nfl_data_pbp[(nfl_data_pbp['Receiver_ID']) == i]
-        ac = a.groupby('Receiver')['Receiver'].agg({'count'}).reset_index()
-        max_player = ac['Receiver'][ac['count'].argmax()]
-        nfl_data_pbp['Receiver'] = np.where(nfl_data_pbp['Receiver_ID'] == i,
-                                            max_player,
-                                            nfl_data_pbp['Receiver'])
-    except ValueError:
-        pass
-
-passer_ids = nfl_data_pbp['Passer_ID'].unique()
-for i in passer_ids:
-    try:
-        a = nfl_data_pbp[(nfl_data_pbp['Passer_ID']) == i]
-        ac = a.groupby('Passer')['Passer'].agg({'count'}).reset_index()
-        max_player = ac['Passer'][ac['count'].argmax()]
-        nfl_data_pbp['Passer'] = np.where(nfl_data_pbp['Passer_ID'] == i,
-                                          max_player,
-                                          nfl_data_pbp['Passer'])
-    except ValueError:
-        pass
-
-def player_fixes(df):
+# Fix incorrect passer, rusher, receiver names given IDs
+# Correct instances where single ID has multiple names (problem exists for all positions)
+def fix_names(df):
+    rusher_ids = df['Rusher_ID'].unique()
+    for i in rusher_ids:
+        try:
+            a = df[(df['Rusher_ID']) == i]
+            ac = a.groupby('Rusher')['Rusher'].agg({'count'}).reset_index()
+            max_player = ac['Rusher'][ac['count'].argmax()]
+            df['Rusher'] = np.where(df['Rusher_ID'] == i,
+                                    max_player,
+                                    df['Rusher'])
+        except ValueError:
+            pass
+    receiver_ids = df['Receiver_ID'].unique()
+    for i in receiver_ids:
+        try:
+            a = df[(df['Receiver_ID']) == i]
+            ac = a.groupby('Receiver')['Receiver'].agg({'count'}).reset_index()
+            max_player = ac['Receiver'][ac['count'].argmax()]
+            df['Receiver'] = np.where(df['Receiver_ID'] == i,
+                                      max_player,
+                                      df['Receiver'])
+        except ValueError:
+            pass
+    passer_ids = df['Passer_ID'].unique()
+    for i in passer_ids:
+        try:
+            a = df[(df['Passer_ID']) == i]
+            ac = a.groupby('Passer')['Passer'].agg({'count'}).reset_index()
+            max_player = ac['Passer'][ac['count'].argmax()]
+            df['Passer'] = np.where(df['Passer_ID'] == i,
+                                    max_player,
+                                    df['Passer'])
+        except ValueError:
+            pass
+        
+# Adjust rusher given play type
+def fix_players(df):
     df['Rusher_ID'] = np.where(df['PlayType'] == "Sack",
                                df['Passer_ID'],
                                df['Rusher_ID'])
     df['Rusher'] = np.where(df['PlayType'] == "Sack",
                             df['Passer'],
                             df['Rusher'])
+    df['Passer'] = np.where(df['Passer_ID'] == "00-0034857",
+                            "J.Allen",
+                            df['Passer'])
+    df['Receiver'] = np.where(df['Receiver_ID'] == "00-0031235",
+                              "O.Beckham",
+                              df['Receiver'])
+    df['Rusher'] = np.where(df['Rusher_ID'] == "00-0019596",
+                            "T.Brady",
+                            df['Rusher'])
+
     return df
 
+# Add model vars, clearly obfuscating function name
 def add_model_variables(df):
     df['Shotgun_Ind'] = 0
     df['No_Huddle_Ind'] = 0
@@ -111,9 +122,8 @@ def add_model_variables(df):
     df['Team_Side_Gap'] = df['posteam'] + "-" + df['RunLocation'] + "-" + df['RunGap']
     return df
 
-
-def prepare_data(df):
-    df = df4
+# Data segregation
+def prepare_pbp_data(df):
     # Passing
     pass_df = df[(df['PlayType'] == "Pass")]
     cols_pass = ["airEPA_Result", "airWPA_Result", "yacEPA_Result", "yacWPA_Result", "PassLocation",
@@ -138,10 +148,10 @@ def prepare_data(df):
     team_passing = pass_df.groupby('posteam').agg({
         'EPA': sum,
         'WPA': sum,
-        'Date': 'count'
+        'play_id': 'count'
         # 'Customer Email': 'nunique'
     }).reset_index()
-    team_passing.rename(columns={'Date': 'Pass_Attempts',
+    team_passing.rename(columns={'play_id': 'Pass_Attempts',
                                  'EPA': 'Pass_EPA',
                                  'WPA': 'Pass_WPA'}, inplace=True)
     team_passing['Pass_EPA_Att'] = team_passing['Pass_EPA'] / team_passing['Pass_Attempts']
@@ -150,10 +160,10 @@ def prepare_data(df):
     team_rushing = rush_df.groupby('posteam').agg({
         'EPA': sum,
         'WPA': sum,
-        'Date': 'count'
+        'play_id': 'count'
         # 'Customer Email': 'nunique'
     }).reset_index()
-    team_rushing.rename(columns={'Date': 'Rush_Attempts',
+    team_rushing.rename(columns={'play_id': 'Rush_Attempts',
                                  'EPA': 'Rush_EPA',
                                  'WPA': 'Rush_WPA'}, inplace=True)
     team_rushing['Rush_EPA_Att'] = team_rushing['Rush_EPA'] / team_rushing['Rush_Attempts']
@@ -162,29 +172,31 @@ def prepare_data(df):
     ind_passing = pass_df.groupby('Passer').agg({
         'EPA': sum,
         'WPA': sum,
-        'Date': 'count'
+        'airEPA_Result': sum,
+        'play_id': 'count'
         # 'Customer Email': 'nunique'
     }).reset_index()
-    ind_passing.rename(columns={'Date': 'Pass_Attempts',
+    ind_passing.rename(columns={'play_id': 'Pass_Attempts',
                                 'EPA': 'Pass_EPA',
                                 'WPA': 'Pass_WPA'}, inplace=True)
     ind_passing['Pass_EPA_Att'] = ind_passing['Pass_EPA'] / ind_passing['Pass_Attempts']
     ind_passing['Pass_WPA_Att'] = ind_passing['Pass_WPA'] / ind_passing['Pass_Attempts']
-    ind_passing = ind_passing[(ind_passing['Pass_Attempts'] > 100)]
+    ind_passing['airEPA_Att'] = ind_passing['airEPA_Result'] / ind_passing['Pass_Attempts']
+    ind_passing = ind_passing[(ind_passing['Pass_Attempts'] > 150)]
     # Ind Rushing
     ind_rushing = rush_df.groupby('Rusher').agg({
         'EPA': sum,
         'WPA': sum,
-        'Date': 'count'
+        'play_id': 'count'
         # 'Customer Email': 'nunique'
     }).reset_index()
-    ind_rushing.rename(columns={'Date': 'Rush_Attempts',
+    ind_rushing.rename(columns={'play_id': 'Rush_Attempts',
                                 'EPA': 'Rush_EPA',
                                 'WPA': 'Rush_WPA',
                                 'Rusher': 'Player'}, inplace=True)
     ind_rushing['Rush_EPA_Att'] = ind_rushing['Rush_EPA'] / ind_rushing['Rush_Attempts']
     ind_rushing['Rush_WPA_Att'] = ind_rushing['Rush_WPA'] / ind_rushing['Rush_Attempts']
-    ind_rushing = ind_rushing[(ind_rushing['Rush_Attempts'] > 100)]
+    # ind_rushing = ind_rushing[(ind_rushing['Rush_Attempts'] > 25)]
         # filter out QBs from Rush df
     qbs = ind_passing[(ind_passing['Pass_Attempts'] > 15)]['Passer']
     ind_rushing = ind_rushing[~ind_rushing['Player'].isin(qbs)]
@@ -192,15 +204,15 @@ def prepare_data(df):
     ind_receiving = rec_df.groupby('Receiver').agg({
         'EPA': sum,
         'WPA': sum,
-        'Date': 'count'
+        'play_id': 'count'
     }).reset_index()
-    ind_receiving.rename(columns={'Date': 'Targets',
+    ind_receiving.rename(columns={'play_id': 'Targets',
                                   'EPA': 'Rec_EPA',
                                   'WPA': 'Rec_WPA',
                                   'Receiver': 'Player'}, inplace=True)
     ind_receiving['Rec_EPA_Target'] = ind_receiving['Rec_EPA'] / ind_receiving['Targets']
     ind_receiving['Rec_WPA_Target'] = ind_receiving['Rec_WPA'] / ind_receiving['Targets']
-    ind_receiving = ind_receiving[(ind_receiving['Targets'] > 30)]
+    # ind_receiving = ind_receiving[(ind_receiving['Targets'] > 25)]
     # Combine ind_rushing and ind_receiving
     merged_ind = pd.merge(ind_rushing, ind_receiving, on="Player")
     merged_ind['Opportunities'] = merged_ind['Rush_Attempts'] + merged_ind['Targets']
@@ -214,11 +226,12 @@ def prepare_data(df):
                                     / merged_ind['Opportunities']
     return team_passing, team_rushing, ind_passing, ind_rushing, ind_receiving, merged_ind
 
-
+# Run functions
 df2 = fix_teams(nfl_data_pbp)
-df3 = player_fixes(df2)
-df4 = add_model_variables(df3)
-team_pass_df, team_rush_df, ind_pass_df, ind_rush_df, ind_rec_df, ind_rec_rush_df = prepare_data(df4)
+df3 = fix_names(df2)
+df4 = fix_players(df3)
+df5 = add_model_variables(df4)
+team_pass_df, team_rush_df, ind_pass_df, ind_rush_df, ind_rec_df, ind_rec_rush_df = prepare_pbp_data(df4)
 
 
 
