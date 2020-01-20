@@ -19,11 +19,6 @@ import modin.pandas as pd_modin
 nfl_data_pbp = pd.read_csv('~/Desktop/R/NFL/NFL_pbp_data.csv')
 nfl_data_salary = pd.read_csv("~/Desktop/Python/NFL/nfl salary - Sheet1.csv")
 
-print(list(nfl_data_pbp))
-
-# Fix nan, LA to LAR, STL to LAR,
-nfl_data_pbp = nfl_data_pbp[pd.notnull(nfl_data_pbp['posteam'])]
-
 # Fix nan, LA to LAR, STL to LAR,
 def fix_teams(df):
     df = df[pd.notnull(df['posteam'])]
@@ -47,7 +42,7 @@ def fix_teams(df):
                                    df['DefensiveTeam'])
     return df
 
-# Fix incorrect passer, rusher, receiver names given IDs
+# Fix incorrect passer, rusher, receiver names given IDs, expect outsize run time
 # Correct instances where single ID has multiple names (problem exists for all positions)
 def fix_names(df):
     rusher_ids = df['Rusher_ID'].unique()
@@ -83,7 +78,7 @@ def fix_names(df):
                                     df['Passer'])
         except ValueError:
             pass
-        
+
 # Adjust rusher given play type
 def fix_players(df):
     df['Rusher_ID'] = np.where(df['PlayType'] == "Sack",
@@ -224,14 +219,16 @@ def prepare_pbp_data(df):
                                     / merged_ind['Opportunities']
     merged_ind['Weighted_WPA_Opps'] = (merged_ind['Weighted_Rush_WPA'] + merged_ind['Weighted_Target_WPA']) \
                                     / merged_ind['Opportunities']
-    return team_passing, team_rushing, ind_passing, ind_rushing, ind_receiving, merged_ind
+    merged_team = pd.merge(team_passing, team_rushing, on="posteam")
+    return merged_team, team_passing, team_rushing, ind_passing, ind_rushing, ind_receiving, merged_ind
 
 # Run functions
 df2 = fix_teams(nfl_data_pbp)
 df3 = fix_names(df2)
 df4 = fix_players(df3)
 df5 = add_model_variables(df4)
-team_pass_df, team_rush_df, ind_pass_df, ind_rush_df, ind_rec_df, ind_rec_rush_df = prepare_pbp_data(df4)
+merged_team, team_pass_df, team_rush_df, ind_pass_df, ind_rush_df, ind_rec_df, ind_rec_rush_df = prepare_pbp_data(df4)
+
 
 
 
