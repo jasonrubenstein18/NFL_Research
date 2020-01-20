@@ -1,7 +1,7 @@
 """
 Used season_play_by_play in R to pull data, thanks to https://github.com/ryurko
 Salaries from https://docs.google.com/spreadsheets/d/1rds8LOv8t8HqtnM-OLzSbrNpdEy_8vUYAP39swye57I/edit?usp=sharing
-Further data manipulation is rewritten in Python and partially expanded with more to come
+Some required data manipulation is rewritten in Python and expanded with more to come
 """
 
 import os
