@@ -78,6 +78,7 @@ def fix_names(df):
                                     df['Passer'])
         except ValueError:
             pass
+    return df
 
 # Adjust rusher given play type
 def fix_players(df):
@@ -117,8 +118,53 @@ def add_model_variables(df):
     df['Team_Side_Gap'] = df['posteam'] + "-" + df['RunLocation'] + "-" + df['RunGap']
     return df
 
-# Data segregation
-def prepare_pbp_data(df):
+# Run functions
+df2 = fix_teams(nfl_data_pbp)
+df3 = fix_names(df2)
+df4 = fix_players(df3)
+pbp_df = add_model_variables(df4)
+
+# Merge salaries with pbp data
+def fix_salaries(df):
+    df = df.drop_duplicates(subset=['playerName', 'year'], keep='first')
+    df = df[['playerName', 'year', 'team', 'salary', 'signingBonus', 'totalCash']]
+    df['FirstLetter'] = df['playerName'].astype(str).str[0]
+    df['FirstName'], df['LastName'] = df['playerName'].str.split(' ', 1).str
+    df['matchName'] = df['FirstLetter'] + "." + df['LastName']
+    # Delete redundant cols
+    del (df['FirstLetter'], df['FirstName'], df['LastName'])
+
+    # print(len(nfl_data_pbp))
+    # Passer Salary, Rusher Salary, Receiver Salary add
+    df.rename(columns={'year': 'Season',
+                       'matchName': 'Passer',
+                       'playerName': 'PasserName',
+                       'salary': 'Passer_salary',
+                       'signingBonus': 'Passer_signingBonus',
+                       'totalCash': 'Passer_totalCash'}, inplace=True)
+    pbp_merged_pass = pd.merge(pbp_df, df, on=["Season", "Passer"], how='left')
+    # print(len(pbp_merged_pass))
+
+    # Rusher
+    df.rename(columns={'Passer': 'Rusher',
+                       'PasserName': 'RusherName',
+                       'Passer_salary': 'Rusher_salary',
+                       'Passer_signingBonus': 'Rusher_signingBonus',
+                       'Passer_totalCash': 'Rusher_totalCash'}, inplace=True)
+    pbp_merged_pass_rush = pd.merge(pbp_merged_pass, df, on=["Season", "Rusher"], how='left')
+    # print(len(pbp_merged_pass_rush))
+
+    # Receiver
+    df.rename(columns={'Rusher': 'Receiver',
+                       'RusherName': 'ReceiverName',
+                       'Rusher_salary': 'Receiver_salary',
+                       'Rusher_signingBonus': 'Receiver_signingBonus',
+                       'Rusher_totalCash': 'Receiver_totalCash'}, inplace=True)
+    pbp_merged_salary = pd.merge(pbp_merged_pass_rush, df, on=["Season", "Receiver"], how='left')
+    return pbp_merged_salary
+
+# Data segregation / Add salary cols into this code want to group performance by season and match player pay to that
+def prep_pbp_data(df):
     # Passing
     pass_df = df[(df['PlayType'] == "Pass")]
     cols_pass = ["airEPA_Result", "airWPA_Result", "yacEPA_Result", "yacWPA_Result", "PassLocation",
@@ -222,21 +268,15 @@ def prepare_pbp_data(df):
     merged_team = pd.merge(team_passing, team_rushing, on="posteam")
     return merged_team, team_passing, team_rushing, ind_passing, ind_rushing, ind_receiving, merged_ind
 
-# Run functions
-df2 = fix_teams(nfl_data_pbp)
-df3 = fix_names(df2)
-df4 = fix_players(df3)
-df5 = add_model_variables(df4)
-merged_team, team_pass_df, team_rush_df, ind_pass_df, ind_rush_df, ind_rec_df, ind_rec_rush_df = prepare_pbp_data(df4)
+# Run more functions
+pbp_merged_salary = fix_salaries(nfl_data_salary)
 
-
-
-
-merged_team = pd.merge(team_pass_df, team_rush_df, on="posteam")
+merged_team, team_pass_df, team_rush_df,\
+ind_pass_df, ind_rush_df, ind_rec_df, ind_rec_rush_df = prep_pbp_data(pbp_merged_salary)
 
 
 # Plot EPA/Attempt for Rush and Pass (x, y) with color/legend for team name
-fig = plotly_express.scatter(ind_rec_rush_df, x="Weighted_EPA_Opps", y="Weighted_WPA_Opps", color="Player",
-                             size='Opportunities', hover_data=['Player'])
+ind_rec_rush_df_use = ind_rec_rush_df[(ind_rec_rush_df['Opportunities'] > 50) & (ind_rec_rush_df['Rush_Attempts'] > 5)]
+fig = plotly_express.scatter(merged_team, x="Pass_WPA_Att", y="Rush_WPA_Att", color="posteam",
+                             size='Rush_Attempts', hover_data=['posteam'])
 fig.show()
-
