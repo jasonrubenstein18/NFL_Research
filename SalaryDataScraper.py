@@ -1,5 +1,3 @@
-# Still buggy, working to resolve
-
 import pandas as pd
 import bs4
 from bs4 import BeautifulSoup as bs
@@ -16,34 +14,62 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import re
 import os
+import numpy as np
+import time
+
+## scrape overthecap yearly salary data and position
+years = [2014, 2015, 2016, 2017, 2018, 2019]
+positions = ['quarterback', 'running-back', 'wide-receiver', 'tight-end', 'left-tackle', 'left-guard',
+             'center', 'right-guard', 'right-tackle', 'defensive-line', 'linebacker', 'defensive-back',
+             'kicker', 'punter']
 
 
-years = [2014]#, 2015, 2016, 2017, 2018, 2019]
-cats = ['cash']  # , 'cap-hit', 'signing-cash', 'average']
-urls = []
 appended_data = pd.DataFrame()
 
-for c_year in years:
-    for c_cat in cats:
-        url = "https://www.spotrac.com/nfl/rankings/" + str(c_year) + "/" + str(c_cat)
+urls = []
+for y in years:
+    for p in positions:
+        url = "https://overthecap.com/position/" + str(p) + "/" + str(y) + ""
         urls.append(url)
-        for url in urls:
-            # if i < len(years):
-                driver = webdriver.Chrome()
-                driver.get(url)
-                response = requests.get(url).text
-                soup = bs(response, 'html.parser')
-                salary_df = pd.DataFrame({'Player': [item.text.strip() for item in
-                                                     soup.find_all('a', {'class': 'team-name'})],
-                                          # Make if statement here for column name, if not just cash
-                                          'CashEarnings': [item.text.strip() for item in
-                                                           soup.find_all('span', {'class': 'info'})],
-                                          'Position': [item.text.strip() for item in
-                                                       soup.find_all('span', {'class': 'rank-position'})]
-                                          })
-                salary_df['Year'] = c_year
-                appended_data = appended_data.append(salary_df)
-                appended_data['CashEarnings'] = appended_data['CashEarnings'].str.replace('$', '')
-                appended_data['CashEarnings'] = appended_data['CashEarnings'].str.replace(',', '')
-                appended_data['CashEarnings'] = appended_data['CashEarnings'].astype(int)
-        driver.close()
+
+for url in urls:
+    series_url = pd.Series(url)
+    df_url = series_url.str.split('/', expand=True)
+    df_url.columns = ['protocol', 'blank', 'path', 'pos_fixed', 'position', 'year']
+    driver = webdriver.Chrome()
+    driver.implicitly_wait(30)
+    driver.get(url)
+    # response = requests.get(url).text
+    response = requests.get(url).text
+    soup = bs(response, "html.parser")
+    rows = soup.find_all('td')
+    df = pd.Series([item.text.strip() for item in rows])
+    df_fix = pd.DataFrame(np.reshape(df.values, (df.shape[0] // 4, 4)),
+                          columns=['Player', 'Team', 'CapHit', 'Salary'])
+    df_fix['Year'] = df_url['position'][0]
+    df_fix['Position'] = df_url['year'][0]
+    appended_data = appended_data.append(df_fix, ignore_index=True)
+    time.sleep(5)
+    driver.close()
+
+
+print(len(appended_data))
+
+eli = appended_data[(appended_data['Player'] == "Eli Manning")]
+
+appended_data_unique = appended_data.drop_duplicates(subset=['Player', 'Year'], keep='first').reset_index(drop=True)
+
+print(len(appended_data_unique))
+
+def cleanup_sal_data(df):
+    df['CapHit'] = df['CapHit'].str.replace('$', '')
+    df['CapHit'] = df['CapHit'].str.replace(',', '')
+    df['Salary'] = df['Salary'].str.replace('$', '')
+    df['Salary'] = df['Salary'].str.replace(',', '')
+    df['CapHit'] = df['CapHit'].astype(int)
+    df['Salary'] = df['Salary'].astype(int)
+    return df
+
+appended_data_full = cleanup_sal_data(appended_data)
+
+appended_data_full.to_csv(...)
