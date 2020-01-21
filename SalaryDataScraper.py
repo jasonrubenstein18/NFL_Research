@@ -52,15 +52,6 @@ for url in urls:
     time.sleep(5)
     driver.close()
 
-
-print(len(appended_data))
-
-eli = appended_data[(appended_data['Player'] == "Eli Manning")]
-
-appended_data_unique = appended_data.drop_duplicates(subset=['Player', 'Year'], keep='first').reset_index(drop=True)
-
-print(len(appended_data_unique))
-
 def cleanup_sal_data(df):
     df['CapHit'] = df['CapHit'].str.replace('$', '')
     df['CapHit'] = df['CapHit'].str.replace(',', '')
