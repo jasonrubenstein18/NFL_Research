@@ -16,8 +16,8 @@ os.environ["MODIN_ENGINE"] = "dask"
 import modin.pandas as pd_modin
 
 # Update paths for your own machine
-nfl_data_pbp = pd.read_csv('~/Desktop/R/NFL/NFL_pbp_data.csv')
-nfl_data_salary = pd.read_csv("~/Desktop/Python/NFL/nfl salary - Sheet1.csv")
+nfl_data_pbp = pd.read_csv(...)
+nfl_data_salary = pd.read_csv(...)
 
 # Fix nan, LA to LAR, STL to LAR,
 def fix_teams(df):
