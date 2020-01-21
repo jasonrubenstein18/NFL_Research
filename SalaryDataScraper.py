@@ -46,8 +46,8 @@ for url in urls:
     df = pd.Series([item.text.strip() for item in rows])
     df_fix = pd.DataFrame(np.reshape(df.values, (df.shape[0] // 4, 4)),
                           columns=['Player', 'Team', 'CapHit', 'Salary'])
-    df_fix['Year'] = df_url['position'][0]
-    df_fix['Position'] = df_url['year'][0]
+    df_fix['Year'] = df_url['year'][0]
+    df_fix['Position'] = df_url['position'][0]
     appended_data = appended_data.append(df_fix, ignore_index=True)
     time.sleep(5)
     driver.close()
