@@ -1,7 +1,6 @@
 import pandas as pd
 import bs4
 from bs4 import BeautifulSoup as bs
-import re
 import urllib
 from urllib.request import urlopen, Request
 import requests
@@ -12,7 +11,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
 import pandas as pd
-import re
 import os
 import numpy as np
 import time
