@@ -54,9 +54,10 @@ for url in urls:
 
 print(appended_draft_data)
 
+
 def remove_supplemental(df):
     df = df.drop_duplicates(subset=['Pick', 'DraftYear'], keep='first').reset_index(drop=True)
     return df
 
-nfl_draft_only = remove_supplemental(appended_draft_data)
 
+nfl_draft_only = remove_supplemental(appended_draft_data)
