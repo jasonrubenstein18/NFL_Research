@@ -35,7 +35,6 @@ for url in urls:
     driver = webdriver.Chrome()
     driver.implicitly_wait(30)
     driver.get(url)
-    # response = requests.get(url).text
     response = requests.get(url).text
     soup = bs(response, "html.parser")
     rows = soup.find_all('td')
