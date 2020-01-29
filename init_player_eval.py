@@ -11,36 +11,66 @@ import plotly
 import plotly_express
 from collections import Counter
 import matplotlib.pyplot as plt
+# import modin.pandas as pd_modin
+# os.environ["MODIN_ENGINE"] = "dask"
+pbp_data = pd.read_csv('~/Desktop/R/NFL/Data/NFL_pbp_data.csv')
+combine_data = pd.read_csv("~/Desktop/Python/NFL/Data/nfl_combine.csv")
+salary_data = pd.read_csv("~/Desktop/Python/NFL/Data/nfl_salaries.csv")
+draft_data = pd.read_csv("~/Desktop/Python/NFL/Data/nfl_draft.csv")
 
-os.environ["MODIN_ENGINE"] = "dask"
-import modin.pandas as pd_modin
 
-# Update paths for your own machine
-nfl_data_pbp = pd.read_csv(...)
-nfl_data_salary = pd.read_csv(...)
+def merge_draft_combine(combine_df, draft_df):
+    del combine_df['College'], combine_df['Unnamed: 0'], draft_df['Unnamed: 0']
+    combine_df.rename(columns={'School': 'College'}, inplace=True)
+    combine_draft_merge = pd.merge(combine_df, draft_df,
+                                   left_on=["Player", "College", "Year"], right_on=["Player", "College", "DraftYear"],
+                                   how='left')
+    return combine_draft_merge
 
-# Fix nan, LA to LAR, STL to LAR,
-def fix_teams(df):
-    df = df[pd.notnull(df['posteam'])]
-    df['posteam'] = np.where((df['posteam'] == "JAC"),
-                             "JAX",
-                             df['posteam'])
-    df['posteam'] = np.where((df['posteam'] == "STL") | (df['posteam'] == "LA"),
-                             "LAR",
-                             df['posteam'])
-    df['posteam'] = np.where((df['posteam'] == "SD"),
-                             "LAC",
-                             df['posteam'])
-    df['DefensiveTeam'] = np.where((df['DefensiveTeam'] == "JAC"),
-                                   "JAX",
-                                   df['DefensiveTeam'])
-    df['DefensiveTeam'] = np.where((df['DefensiveTeam'] == "STL") | (df['DefensiveTeam'] == "LA"),
-                                   "LA",
-                                   df['DefensiveTeam'])
-    df['DefensiveTeam'] = np.where((df['DefensiveTeam'] == "SD"),
-                                   "LAC",
-                                   df['DefensiveTeam'])
-    return df
+
+combine_draft_merge = merge_draft_combine(combine_data, draft_data)
+
+# Define team name dictionary
+team_name_dict = {'Giants': "NYG", 'Steelers': "PIT", 'Bears': "CHI", 'Saints': "NO",
+                  'Rams': "LA", 'Packers': "GB", 'Broncos': "DEN", 'Falcons': "ATL",
+                  'Chargers': "LAC", 'Lions': "DET", 'Ravens': "BAL", 'Patriots': "NE",
+                  'Cardinals': "ARI", 'Cowboys': "DAL", 'Bengals': "CIN",
+                  'Raiders': "OAK", 'Panthers': "CAR", 'Colts': "IND", 'Redskins': "WAS",
+                  'Vikings': "MIN", 'Jaguars': "JAX", 'Dolphins': "MIA", 'Buccaneers': "TB",
+                  'Chiefs': "KC", 'Titans': "TEN", 'Bills': "BUF", 'Jets': 'NYJ', '49ers': 'SF',
+                  'Texans': "HOU", 'Eagles': "PHI", 'Browns': "CLE", 'Seahawks': "SEA", np.nan: np.nan,
+                  'New York Jets': "NYJ", 'Seattle Seahawks': "SEA", 'Kansas City Chiefs': "KC",
+                  'Carolina Panthers': "CAR", 'Washington Redskins': "WAS", 'Chicago Bears': "CHI",
+                  'Jacksonville Jaguars': "JAX", 'Cleveland Browns': "CLE", 'Arizona Cardinals': "ARI",
+                  'Cincinnati Bengals': "CIN", 'San Diego Chargers': "LAC", 'Green Bay Packers': "GB",
+                  'Minnesota Vikings': "MIN", 'St. Louis Rams': "LA", 'New England Patriots': "NE",
+                  'New York Giants': "NYG", 'New Orleans Saints': "NO", 'Tennessee Titans': "TEN",
+                  'Pittsburgh Steelers': "PIT", 'Denver Broncos': "DEN", 'San Francisco 49ers': "SF",
+                  'Atlanta Falcons': "ATL", 'Tampa Bay Buccaneers': "TB", 'Detroit Lions': "DET",
+                  'Miami Dolphins': "MIA", 'Dallas Cowboys': "DAL", 'Buffalo Bills': "BUF",
+                  'Philadelphia Eagles': "PHI", 'Oakland Raiders': "OAK", 'Indianapolis Colts': "IND",
+                  'Baltimore Ravens': "BAL", 'Houston Texans': "HOU", 'Los Angeles Rams': "LA",
+                  'Los Angeles Chargers': "LA", 'SFO': "SF", 'GNB': "GB", 'KAN': "KC", 'STL': "LA",
+                  'NOR': "NO", 'SDG': "LAC", 'NWE': "NE", 'TAM': "TB", 'LAR': "LA", 'CLE': "CLE",
+                  'WAS': "WAS", 'CIN': "CIN", 'BAL': "BAL", 'PHI': "PHI", 'ARI': "ARI", 'PIT': "PIT",
+                  'CHI': "CHI", 'NYG': "NYG", 'NYJ': "NYJ", 'DEN': "DEN", 'OAK': "OAK", 'SEA': "SEA",
+                  'DET': "DET", 'CAR': "CAR", 'MIN': "MIN", 'BUF': "BUF", 'IND': "IND", 'JAX': "JAX",
+                  'TEN': "TEN", 'ATL': "ATL", 'DAL': "DAL", 'MIA': "MIA", 'HOU': "HOU", 'GB': "GB",
+                  'NO': "NO", 'JAC': "JAX", 'KC': "KC", 'NE': "NE", 'TB': "TB", 'SF': "SF", 'LA': "LA", 'LAC': "LAC"
+                  }
+
+# Fix team names and abbreviations based on dictionary
+salary_data['Team'] = salary_data['Team'].map(team_name_dict)
+draft_data['Team'] = draft_data['Team'].map(team_name_dict)
+combine_data['DraftedTeam'] = combine_data['DraftedTeam'].map(team_name_dict)
+pbp_data['SideofField'] = pbp_data['SideofField'].map(team_name_dict)
+pbp_data['posteam'] = pbp_data['posteam'].map(team_name_dict)
+pbp_data['DefensiveTeam'] = pbp_data['DefensiveTeam'].map(team_name_dict)
+pbp_data['PenalizedTeam'] = pbp_data['PenalizedTeam'].map(team_name_dict)
+pbp_data['HomeTeam'] = pbp_data['HomeTeam'].map(team_name_dict)
+pbp_data['AwayTeam'] = pbp_data['AwayTeam'].map(team_name_dict)
+pbp_data['Timeout_Team'] = pbp_data['Timeout_Team'].map(team_name_dict)
+
 
 # Fix incorrect passer, rusher, receiver names given IDs, expect outsize run time
 # Correct instances where single ID has multiple names (problem exists for all positions)
@@ -80,8 +110,10 @@ def fix_names(df):
             pass
     return df
 
+
 # Adjust rusher given play type
 def fix_players(df):
+    df = fix_names(df)
     df['Rusher_ID'] = np.where(df['PlayType'] == "Sack",
                                df['Passer_ID'],
                                df['Rusher_ID'])
@@ -100,8 +132,10 @@ def fix_players(df):
 
     return df
 
+
 # Add model vars, clearly obfuscating function name
 def add_model_variables(df):
+    df = fix_players(df)
     df['Shotgun_Ind'] = 0
     df['No_Huddle_Ind'] = 0
     df['Team_Side_Gap'] = 0
@@ -118,79 +152,78 @@ def add_model_variables(df):
     df['Team_Side_Gap'] = df['posteam'] + "-" + df['RunLocation'] + "-" + df['RunGap']
     return df
 
-# Run functions
-df2 = fix_teams(nfl_data_pbp)
-df3 = fix_names(df2)
-df4 = fix_players(df3)
-pbp_df = add_model_variables(df4)
 
 # Merge salaries with pbp data
-def fix_salaries(df):
-    df = df.drop_duplicates(subset=['playerName', 'year'], keep='first')
-    df = df[['playerName', 'year', 'team', 'salary', 'signingBonus', 'totalCash']]
-    df['FirstLetter'] = df['playerName'].astype(str).str[0]
-    df['FirstName'], df['LastName'] = df['playerName'].str.split(' ', 1).str
+def fix_salaries(salary_df, pbp_df):
+    pbp_df = add_model_variables(pbp_df)
+    df = salary_df.drop_duplicates(subset=['Player', 'Year', 'Team', 'CapHit'], keep='first')
+    df = df[['Player', 'Team', 'CapHit', 'Salary', 'Position', 'Year']]
+    df['FirstLetter'] = df['Player'].astype(str).str[0]
+    df['FirstName'], df['LastName'] = df['Player'].str.split(' ', 1).str
     df['matchName'] = df['FirstLetter'] + "." + df['LastName']
     # Delete redundant cols
     del (df['FirstLetter'], df['FirstName'], df['LastName'])
 
     # print(len(nfl_data_pbp))
     # Passer Salary, Rusher Salary, Receiver Salary add
-    df.rename(columns={'year': 'Season',
-                       'matchName': 'Passer',
-                       'playerName': 'PasserName',
-                       'salary': 'Passer_salary',
-                       'signingBonus': 'Passer_signingBonus',
-                       'totalCash': 'Passer_totalCash'}, inplace=True)
-    pbp_merged_pass = pd.merge(pbp_df, df, on=["Season", "Passer"], how='left')
-    # print(len(pbp_merged_pass))
-
+    df.rename(columns={'Player': 'PasserName',
+                       'Salary': 'Passer_salary',
+                       'CapHit': 'Passer_capHit',
+                       'Position': 'Passer_position'}, inplace=True)
+    pbp_merged_pass = pd.merge(pbp_df, df,
+                               left_on=["Season", "Passer", "posteam"], right_on=["Year", "matchName", "Team"],
+                               how='left')
     # Rusher
-    df.rename(columns={'Passer': 'Rusher',
-                       'PasserName': 'RusherName',
+    df.rename(columns={'PasserName': 'RusherName',
                        'Passer_salary': 'Rusher_salary',
-                       'Passer_signingBonus': 'Rusher_signingBonus',
-                       'Passer_totalCash': 'Rusher_totalCash'}, inplace=True)
-    pbp_merged_pass_rush = pd.merge(pbp_merged_pass, df, on=["Season", "Rusher"], how='left')
-    # print(len(pbp_merged_pass_rush))
-
+                       'Passer_capHit': 'Rusher_capHit',
+                       'Passer_position': 'Rusher_position'}, inplace=True)
+    pbp_merged_pass_rush = pd.merge(pbp_merged_pass, df,
+                                    left_on=["Season", "Rusher", "posteam"], right_on=["Year", "matchName", "Team"],
+                                    how='left')
     # Receiver
-    df.rename(columns={'Rusher': 'Receiver',
-                       'RusherName': 'ReceiverName',
+    df.rename(columns={'RusherName': 'ReceiverName',
                        'Rusher_salary': 'Receiver_salary',
-                       'Rusher_signingBonus': 'Receiver_signingBonus',
-                       'Rusher_totalCash': 'Receiver_totalCash'}, inplace=True)
-    pbp_merged_salary = pd.merge(pbp_merged_pass_rush, df, on=["Season", "Receiver"], how='left')
-    return pbp_merged_salary
+                       'Rusher_capHit': 'Receiver_capHit',
+                       'Rusher_position': 'Receiver_position'}, inplace=True)
+    pbp_sal = pd.merge(pbp_merged_pass_rush, df,
+                       left_on=["Season", "Receiver", "posteam"], right_on=["Year", "matchName", "Team"],
+                       how='left')
+    del pbp_sal['Team_x'], pbp_sal['Team_y'], pbp_sal['Year_x'], pbp_sal['Year_y'], \
+        pbp_sal['matchName_x'], pbp_sal['matchName_y'], pbp_sal['Year'], pbp_sal['matchName']
+    return pbp_sal
+
 
 # Data segregation / Add salary cols into this code want to group performance by season and match player pay to that
 def prep_pbp_data(df):
     # Passing
     pass_df = df[(df['PlayType'] == "Pass")]
     cols_pass = ["airEPA_Result", "airWPA_Result", "yacEPA_Result", "yacWPA_Result", "PassLocation",
-                 "Passer_ID", "Receiver_ID", "Passer", "Receiver"]
+                 "Passer_ID", "Receiver_ID", "Passer", "Receiver", "Passer_salary", "Passer_capHit", "PasserName",
+                 "ReceiverName", "Receiver_salary", "Receiver_capHit", "Receiver_position"]
     for i in cols_pass:
         pass_df = pass_df[pd.notnull(pass_df[i])]
     pass_df = pass_df[(pass_df['Receiver_ID'] != "None") & (pass_df['Passer_ID'] != "None")]
     # Rushing
     rush_df = df[(df['PlayType'] == "Run") | (df['PlayType'] == "Sack")]
-    cols_rush = ["EPA", "WPA", "Team_Side_Gap", "Rusher", "Rusher_ID"]
+    cols_rush = ["EPA", "WPA", "Team_Side_Gap", "Rusher", "Rusher_ID", "RusherName", "Rusher_capHit", "Rusher_salary",
+                 "Rusher_position"]
     for k in cols_rush:
         rush_df = rush_df[pd.notnull(rush_df[k])]
     rush_df = rush_df[(rush_df['Rusher_ID'] != "None")]
     # Receiving
     rec_df = pass_df
     cols_rec = ["airEPA_Result", "airWPA_Result", "yacEPA_Result", "yacWPA_Result", "PassLocation",
-                "Passer_ID", "Receiver_ID", "Passer", "Receiver"]
+                "Passer_ID", "Receiver_ID", "Passer", "Receiver", "Passer_salary", "Passer_capHit", "PasserName",
+                "ReceiverName", "Receiver_salary", "Receiver_capHit", "Receiver_position"]
     for g in cols_rec:
         rec_df = rec_df[pd.notnull(rec_df[g])]
     rec_df = rec_df[(rec_df['Receiver_ID'] != "None") & (rec_df['Passer_ID'] != "None")]
     # Team Passing
-    team_passing = pass_df.groupby('posteam').agg({
+    team_passing = pass_df.groupby(['Season', 'posteam']).agg({
         'EPA': sum,
         'WPA': sum,
         'play_id': 'count'
-        # 'Customer Email': 'nunique'
     }).reset_index()
     team_passing.rename(columns={'play_id': 'Pass_Attempts',
                                  'EPA': 'Pass_EPA',
@@ -198,11 +231,10 @@ def prep_pbp_data(df):
     team_passing['Pass_EPA_Att'] = team_passing['Pass_EPA'] / team_passing['Pass_Attempts']
     team_passing['Pass_WPA_Att'] = team_passing['Pass_WPA'] / team_passing['Pass_Attempts']
     # Team Rushing
-    team_rushing = rush_df.groupby('posteam').agg({
+    team_rushing = rush_df.groupby(['Season', 'posteam']).agg({
         'EPA': sum,
         'WPA': sum,
         'play_id': 'count'
-        # 'Customer Email': 'nunique'
     }).reset_index()
     team_rushing.rename(columns={'play_id': 'Rush_Attempts',
                                  'EPA': 'Rush_EPA',
@@ -210,12 +242,13 @@ def prep_pbp_data(df):
     team_rushing['Rush_EPA_Att'] = team_rushing['Rush_EPA'] / team_rushing['Rush_Attempts']
     team_rushing['Rush_WPA_Att'] = team_rushing['Rush_WPA'] / team_rushing['Rush_Attempts']
     # Ind Passing
-    ind_passing = pass_df.groupby('Passer').agg({
+    ind_passing = pass_df.groupby(['Season', 'Passer']).agg({
         'EPA': sum,
         'WPA': sum,
         'airEPA_Result': sum,
-        'play_id': 'count'
-        # 'Customer Email': 'nunique'
+        'play_id': 'count',
+        'Passer_salary': 'max',
+        'Passer_capHit': 'max'
     }).reset_index()
     ind_passing.rename(columns={'play_id': 'Pass_Attempts',
                                 'EPA': 'Pass_EPA',
@@ -225,11 +258,12 @@ def prep_pbp_data(df):
     ind_passing['airEPA_Att'] = ind_passing['airEPA_Result'] / ind_passing['Pass_Attempts']
     ind_passing = ind_passing[(ind_passing['Pass_Attempts'] > 150)]
     # Ind Rushing
-    ind_rushing = rush_df.groupby('Rusher').agg({
+    ind_rushing = rush_df.groupby(['Season', 'Rusher']).agg({
         'EPA': sum,
         'WPA': sum,
-        'play_id': 'count'
-        # 'Customer Email': 'nunique'
+        'play_id': 'count',
+        'Rusher_salary': 'max',
+        'Rusher_capHit': 'max'
     }).reset_index()
     ind_rushing.rename(columns={'play_id': 'Rush_Attempts',
                                 'EPA': 'Rush_EPA',
@@ -242,10 +276,12 @@ def prep_pbp_data(df):
     qbs = ind_passing[(ind_passing['Pass_Attempts'] > 15)]['Passer']
     ind_rushing = ind_rushing[~ind_rushing['Player'].isin(qbs)]
     # Ind Receiving
-    ind_receiving = rec_df.groupby('Receiver').agg({
+    ind_receiving = rec_df.groupby(['Season', 'Receiver']).agg({
         'EPA': sum,
         'WPA': sum,
-        'play_id': 'count'
+        'play_id': 'count',
+        'Receiver_salary': 'max',
+        'Receiver_capHit': 'max'
     }).reset_index()
     ind_receiving.rename(columns={'play_id': 'Targets',
                                   'EPA': 'Rec_EPA',
@@ -255,7 +291,7 @@ def prep_pbp_data(df):
     ind_receiving['Rec_WPA_Target'] = ind_receiving['Rec_WPA'] / ind_receiving['Targets']
     # ind_receiving = ind_receiving[(ind_receiving['Targets'] > 25)]
     # Combine ind_rushing and ind_receiving
-    merged_ind = pd.merge(ind_rushing, ind_receiving, on="Player")
+    merged_ind = pd.merge(ind_rushing, ind_receiving, on=["Player", "Season"])
     merged_ind['Opportunities'] = merged_ind['Rush_Attempts'] + merged_ind['Targets']
     merged_ind['Weighted_Rush_EPA'] = merged_ind['Rush_Attempts'] * merged_ind['Rush_EPA_Att']
     merged_ind['Weighted_Rush_WPA'] = merged_ind['Rush_Attempts'] * merged_ind['Rush_WPA_Att']
@@ -265,14 +301,16 @@ def prep_pbp_data(df):
                                     / merged_ind['Opportunities']
     merged_ind['Weighted_WPA_Opps'] = (merged_ind['Weighted_Rush_WPA'] + merged_ind['Weighted_Target_WPA']) \
                                     / merged_ind['Opportunities']
-    merged_team = pd.merge(team_passing, team_rushing, on="posteam")
+    merged_team = pd.merge(team_passing, team_rushing, on=["posteam", "Season"])
     return merged_team, team_passing, team_rushing, ind_passing, ind_rushing, ind_receiving, merged_ind
 
+
 # Run more functions
-pbp_merged_salary = fix_salaries(nfl_data_salary)
+pbp_salary_merge = fix_salaries(salary_data, pbp_data)
 
 merged_team, team_pass_df, team_rush_df,\
-ind_pass_df, ind_rush_df, ind_rec_df, ind_rec_rush_df = prep_pbp_data(pbp_merged_salary)
+ind_pass_df, ind_rush_df, ind_rec_df, ind_rec_rush_df = prep_pbp_data(pbp_salary_merge)
+
 
 
 # Plot EPA/Attempt for Rush and Pass (x, y) with color/legend for team name
