@@ -68,7 +68,7 @@ _pbp_data = pbp_intro.add_season(_pbp_data)
 
 class NFL_analysis():
    
-    def merge_draft_combine(self, combine_df, draft_df):
+    def merge_draft_combine(combine_df, draft_df):
         combine_draft_merge = pd.merge(combine_df, draft_df,
                                        left_on=["Player", "Year"], right_on=["Player", "DraftYear"],
                                        how='left')
