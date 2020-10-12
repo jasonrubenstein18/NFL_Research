@@ -4,8 +4,6 @@ from bs4 import BeautifulSoup as bs
 import urllib
 import csv
 from csv import writer
-from bs4 import BeautifulSoup
-import pandas as pd
 import os
 import numpy as np
 import time
