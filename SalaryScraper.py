@@ -1,21 +1,19 @@
 import pandas as pd
 import bs4
-from bs4 import BeautifulSoup as bs
 import re
 import urllib
-from urllib.request import urlopen, Request
-import requests
-import csv
-from csv import writer
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from bs4 import BeautifulSoup
-import pandas as pd
-import re
 import os
 import numpy as np
 import time
+import requests
+import csv
+from csv import writer
+from urllib.request import urlopen, Request
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from bs4 import BeautifulSoup as bs
+
 
 ## scrape overthecap yearly salary data and position
 years = [2014, 2015, 2016, 2017, 2018, 2019]
