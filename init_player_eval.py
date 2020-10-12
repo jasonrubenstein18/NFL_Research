@@ -7,27 +7,39 @@ combine_data = pd.read_csv("~/Desktop/Python/NFL/ScrapedFiles/nfl_combine.csv")
 salary_data = pd.read_csv("~/Desktop/Python/NFL/ScrapedFiles/nfl_salaries.csv")
 draft_data = pd.read_csv("~/Desktop/Python/NFL/ScrapedFiles/nfl_draft.csv")
 
-"""
-git clone https://github.com/guga31bb/nflfastR-data
-"""
 
-# PLAY BY PLAY DATA #
-path = '/Users/jasonrubenstein/Desktop/Python/NFL/nflfastR-data/data/*.csv.gz'
-nfl_files = glob.glob(path)
+years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+
+_pbp_data = pd.DataFrame()
+for i in years:
+    low_memory=False  # eliminates a warning
+    i_data = pd.read_csv('https://github.com/guga31bb/nflfastR-data/blob/master/data/' \
+                         'play_by_play_' + str(i) + '.csv.gz?raw=True',
+                         compression='gzip', low_memory=False)
+    _pbp_data = _pbp_data.append(i_data, sort=False)
 
 
 class pbp_intro():
-
-    def get_pbp_csvs(files):
-        _full_data = pd.concat([
-            pd.read_csv(datas,
-                        dtype=str,
-                        error_bad_lines=False,
-                        delimiter=',',
-                        compression='gzip')
-            for datas in files], axis=0)
-        df = _full_data.drop_duplicates(keep='first').reset_index(drop=True)
-        return df
+    
+    
+    # """
+    # git clone https://github.com/guga31bb/nflfastR-data
+    # """
+    # 
+    # # PLAY BY PLAY DATA #
+    # path = '/Users/jasonrubenstein/Desktop/Python/NFL/nflfastR-data/data/*.csv.gz'
+    # nfl_files = glob.glob(path)
+    # 
+    # def get_pbp_csvs(files):
+    #     _full_data = pd.concat([
+    #         pd.read_csv(datas,
+    #                     dtype=str,
+    #                     error_bad_lines=False,
+    #                     delimiter=',',
+    #                     compression='gzip')
+    #         for datas in files], axis=0)
+    #     df = _full_data.drop_duplicates(keep='first').reset_index(drop=True)
+    #     return df
 
     def add_season(df):
         df['Season'] = 0
@@ -60,7 +72,7 @@ class pbp_intro():
         return df
 
 
-_pbp_data = pbp_intro.get_pbp_csvs(nfl_files)
+# _pbp_data = pbp_intro.get_pbp_csvs(nfl_files)  # using git clone method
 
 
 _pbp_data = pbp_intro.add_season(_pbp_data)
