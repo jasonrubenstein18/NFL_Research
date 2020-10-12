@@ -280,3 +280,17 @@ fig = plotly_express.scatter(min_att, x="Rec_EPA_Target", y="Rec_WPA_Target", co
                              hover_data=['posteam', 'Targets'])
 fig.show()
 
+
+## Run the OLine Scraper first
+pass_line_data['Season'] = pass_line_data['Season'].astype(int)
+team_passing_two = team_pass_df[(team_pass_df['Season'] > 2018)]  # 2 most recent years
+team_passing_line = pd.merge(team_passing_two, pass_line_data,  # Merging
+                             left_on=["Season", "posteam"], right_on=["Season", "Pass_Team"],
+                             how='left')
+fig = plotly_express.scatter(team_passing_line, x="Pass_Rank", y="Pass_EPA_Att", color="posteam",
+                             size='Pass_Attempts',
+                             hover_data=['posteam', 'Season'])
+fig.show()
+
+
+
